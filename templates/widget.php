@@ -7,11 +7,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 ?>
 
-<form name="post" action="" method="post" class="initial-form hide-if-no-js">
+<form name="post" action="" method="post" class="um-activity-dummy">
 
-	<div class="input-number-wrap">
-		<label for="uma-number">Number of posts</label>
-		<input type="number" name="uma-number" id="uma-number" min="1" max ="99">
+	<div class="uma-field input-text-wrap">
+		<label for="uma-number" class="label">Number of posts</label>
+		<input type="number" name="uma-number" min="1" max ="99" value="1">
+	</div>
+
+	<div class="uma-field">
+		<label class="label">Content</label>
+		<label><input type="checkbox" name="uma-content-text" value="1" checked="checked">Text</label>
+		<label><input type="checkbox" name="uma-content-emoji" value="1">Emoji</label>
+		<label><input type="checkbox" name="uma-content-photo" value="1">Photo</label>
+		<label><input type="checkbox" name="uma-content-feeling" value="1">Feeling</label>
+		<label><input type="checkbox" name="uma-content-privacy" value="1">Privacy</label>
 	</div>
 
 	<br>

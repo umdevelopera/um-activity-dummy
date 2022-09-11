@@ -13,9 +13,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$dir     = plugin_dir_path( __FILE__ );
-$include = wp_normalize_path( trailingslashit( $dir ) . 'includes/class-widget.php' );
+$dir = trailingslashit( plugin_dir_path( __FILE__ ) );
 
+if ( isset( $_POST['action'] ) ) {
+	$include = wp_normalize_path( $dir . 'includes/class-actions.php' );
+	if ( file_exists( $include ) ) {
+		require_once $include;
+		if ( class_exists( '\uma\includes\Actions' ) ) {
+			$uma = new uma\includes\Actions();
+		}
+	}
+}
+
+$include = wp_normalize_path( $dir . 'includes/class-widget.php' );
 if ( file_exists( $include ) ) {
 	require_once $include;
 	if ( class_exists( '\uma\includes\Widget' ) ) {
