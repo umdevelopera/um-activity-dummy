@@ -29,6 +29,30 @@ class Actions {
 		return isset( $file ) && is_file( $file ) ? file_get_contents( $file ) : 'Test content ' . time();
 	}
 
+	public function get_random_emoji() {
+		if ( empty( $this->emojis ) ) {
+			$file         = wp_normalize_path( $this->plugin_dir . 'data/emojis.json' );
+			$this->emojis = json_decode( trim( file_get_contents( $file ) ), true );
+		}
+		if ( is_array( $this->emojis ) ) {
+			shuffle( $this->emojis );
+			$emoji = current( $this->emojis );
+		}
+		return isset( $emoji ) && is_array( $emoji ) ? $emoji : null;
+	}
+
+	public function get_random_feeling() {
+		if ( empty( $this->feelings ) ) {
+			$file           = wp_normalize_path( $this->plugin_dir . 'data/feelings.json' );
+			$this->feelings = json_decode( trim( file_get_contents( $file ) ), true );
+		}
+		if ( is_array( $this->feelings ) ) {
+			shuffle( $this->feelings );
+			$feeling = current( $this->feelings );
+		}
+		return isset( $feeling ) && is_array( $feeling ) ? $feeling : null;
+	}
+
 	public function get_random_photo() {
 		$dir   = wp_normalize_path( $this->plugin_dir . 'data/photo/' );
 		$files = glob( $dir . '*.jpg' );
@@ -39,30 +63,21 @@ class Actions {
 		return isset( $file ) && is_file( $file ) ? $file : '';
 	}
 
-	public function add_post_photo( $post_id, $user_id ) {
-		$source = $this->get_random_photo();
-		if ( $source ) {
-			$user_dir = UM()->uploader()->get_upload_user_base_dir( $user_id );
-			$hashed   = hash('ripemd160', time() . mt_rand( 10, 1000 ) );
-			$filename = "stream_photo_{$hashed}.jpg";
-			$dest     = trailingslashit( $user_dir ) . wp_basename( $filename );
+	public function add_posts(){
+		check_admin_referer( 'um-activity-dummy' );
 
-			$res = copy( $source, $dest );
-
-			update_post_meta( $post_id, '_photo', $filename );
-
-			$wp_filetype = wp_check_filetype_and_ext( $dest, $filename );
-
-			$photo_metadata                  = array();
-			$photo_metadata['ext']           = empty( $wp_filetype['ext'] ) ? '' : $wp_filetype['ext'];
-			$photo_metadata['type']          = empty( $wp_filetype['type'] ) ? '' : $wp_filetype['type'];
-			$photo_metadata['size']          = filesize( $dest );
-			$photo_metadata['name']          = $dest;
-			$photo_metadata['basename']      = wp_basename( $filename );
-			$photo_metadata['original_name'] = wp_basename( $source );
-
-			update_post_meta( $post_id, '_photo_metadata', $photo_metadata );
+		if ( empty( $_POST[ 'uma-number' ] ) ) {
+			die( 'The "Number of posts" fields is empty' );
 		}
+		$number = absint( $_POST[ 'uma-number' ] );
+
+		$i = 0;
+		while ( $i < $number ) {
+			$this->add_post();
+			$i++;
+		}
+
+		return;
 	}
 
 	public function add_post( $array = array() ) {
@@ -113,6 +128,23 @@ class Actions {
 			$postarr['meta_input']['_oembed'] = (string) $oEmbed;
 		}
 
+		// Emoji.
+		if ( ! empty( $_POST['uma-content-emoji'] ) ) {
+			$emoji = $this->get_random_emoji();
+			if( is_array( $emoji ) ){
+				$postarr['post_content'] .= "\n" . $emoji['c'];
+			}
+		}
+
+		// Feeling.
+		if ( ! empty( $_POST['uma-content-feeling'] ) ) {
+			$feeling = $this->get_random_feeling();
+			if( is_array( $feeling ) ){
+				$postarr['meta_input']['_feeling_emoji'] = $feeling['c'];
+				$postarr['meta_input']['_feeling_title'] = $feeling['t'];
+			}
+		}
+
 		// Add new post.
 		$post_id = wp_insert_post( $postarr );
 
@@ -123,20 +155,29 @@ class Actions {
 		return $post_id;
 	}
 
-	public function add_posts(){
-		check_admin_referer( 'um-activity-dummy' );
+	public function add_post_photo( $post_id, $user_id ) {
+		$source = $this->get_random_photo();
+		if ( $source ) {
+			$user_dir = UM()->uploader()->get_upload_user_base_dir( $user_id );
+			$hashed   = hash('ripemd160', time() . mt_rand( 10, 1000 ) );
+			$filename = "stream_photo_{$hashed}.jpg";
+			$dest     = trailingslashit( $user_dir ) . wp_basename( $filename );
 
-		if ( empty( $_POST[ 'uma-number' ] ) ) {
-			die( 'The "Number of posts" fields is empty' );
+			$res = copy( $source, $dest );
+
+			update_post_meta( $post_id, '_photo', $filename );
+
+			$wp_filetype = wp_check_filetype_and_ext( $dest, $filename );
+
+			$photo_metadata                  = array();
+			$photo_metadata['ext']           = empty( $wp_filetype['ext'] ) ? '' : $wp_filetype['ext'];
+			$photo_metadata['type']          = empty( $wp_filetype['type'] ) ? '' : $wp_filetype['type'];
+			$photo_metadata['size']          = filesize( $dest );
+			$photo_metadata['name']          = $dest;
+			$photo_metadata['basename']      = wp_basename( $filename );
+			$photo_metadata['original_name'] = wp_basename( $source );
+
+			update_post_meta( $post_id, '_photo_metadata', $photo_metadata );
 		}
-		$number = absint( $_POST[ 'uma-number' ] );
-
-		$i = 0;
-		while ( $i < $number ) {
-			$this->add_post();
-			$i++;
-		}
-
-		return;
 	}
 }
