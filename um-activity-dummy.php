@@ -8,9 +8,14 @@
  * Text Domain: um-activity-dummy
  */
 
-// Exit if accessed directly
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
+}
+
+// Require the Ultimate Member plugin.
+if ( ! function_exists( 'UM' ) ) {
+	return;
 }
 
 $dir = trailingslashit( plugin_dir_path( __FILE__ ) );

@@ -63,6 +63,67 @@ class Actions {
 		return isset( $file ) && is_file( $file ) ? $file : '';
 	}
 
+	public function get_random_privacy() {
+		$privacies = array(
+			array(
+				'_privacy' => 0,
+			),
+			array(
+				'_privacy' => 1,
+			),
+			array(
+				'_privacy' => 2,
+			),
+			array(
+				'_privacy'					 => 9,
+				'_privacy_friends'	 => 1,
+				'_privacy_followers' => 0,
+				'_privacy_following' => 0,
+			),
+			array(
+				'_privacy'					 => 9,
+				'_privacy_friends'	 => 0,
+				'_privacy_followers' => 1,
+				'_privacy_following' => 0,
+			),
+			array(
+				'_privacy'					 => 9,
+				'_privacy_friends'	 => 0,
+				'_privacy_followers' => 0,
+				'_privacy_following' => 1,
+			),
+			array(
+				'_privacy'					 => 9,
+				'_privacy_friends'	 => 1,
+				'_privacy_followers' => 1,
+				'_privacy_following' => 0,
+			),
+			array(
+				'_privacy'					 => 9,
+				'_privacy_friends'	 => 1,
+				'_privacy_followers' => 0,
+				'_privacy_following' => 1,
+			),
+			array(
+				'_privacy'					 => 9,
+				'_privacy_friends'	 => 0,
+				'_privacy_followers' => 1,
+				'_privacy_following' => 1,
+			),
+			array(
+				'_privacy'					 => 9,
+				'_privacy_friends'	 => 1,
+				'_privacy_followers' => 1,
+				'_privacy_following' => 1,
+			),
+		);
+		if ( is_array( $privacies ) ) {
+			shuffle( $privacies );
+			$privacy = current( $privacies );
+		}
+		return isset( $privacy ) && is_array( $privacy ) ? $privacy : null;
+	}
+
 	public function add_posts(){
 		check_admin_referer( 'um-activity-dummy' );
 
@@ -93,6 +154,7 @@ class Actions {
 				'_action'   => 'status',
 				'_comments' => 0,
 				'_likes'    => 0,
+				'_privacy'  => 0,
 				'_user_id'  => $user_id,
 				'_wall_id'  => $user_id,
 			),
@@ -142,6 +204,14 @@ class Actions {
 			if( is_array( $feeling ) ){
 				$postarr['meta_input']['_feeling_emoji'] = $feeling['c'];
 				$postarr['meta_input']['_feeling_title'] = $feeling['t'];
+			}
+		}
+
+		// Privacy.
+		if ( ! empty( $_POST['uma-content-privacy'] ) ) {
+			$privacy = $this->get_random_privacy();
+			if( is_array( $privacy ) ){
+				$postarr['meta_input'] = array_merge( $postarr['meta_input'], $privacy );
 			}
 		}
 
