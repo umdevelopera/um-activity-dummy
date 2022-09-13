@@ -124,6 +124,35 @@ class Actions {
 		return isset( $privacy ) && is_array( $privacy ) ? $privacy : null;
 	}
 
+	public function get_random_user() {
+		if ( empty( $this->users ) ) {
+			$args = array(
+				'fields'     => 'ID',
+				'number'     => 10,
+				'meta_key'   => 'account_status',
+				'meta_value' => 'approved',
+			);
+			$this->users = get_users( $args );
+		}
+		if ( is_array( $this->users ) ) {
+			shuffle( $this->users );
+			$user_id = current( $this->users );
+		}
+		return isset( $user_id ) && is_numeric( $user_id ) ? $user_id : get_current_user_id();
+	}
+
+	public function get_random_youtube() {
+		if ( empty( $this->videos ) ) {
+			$file         = wp_normalize_path( $this->plugin_dir . 'data/youtube.php' );
+			$this->videos = include $file;
+		}
+		if ( is_array( $this->videos ) ) {
+			shuffle( $this->videos );
+			$video = current( $this->videos );
+		}
+		return isset( $video ) && is_string( $video ) ? $video : null;
+	}
+
 	public function add_posts(){
 		check_admin_referer( 'um-activity-dummy' );
 
@@ -143,10 +172,11 @@ class Actions {
 
 	public function add_post( $array = array() ) {
 
-		$user_id = empty( $array['author'] ) ? get_current_user_id() : absint( $array['author'] );
+		$user_id = empty( $array['author'] ) ? $this->get_random_user() : absint( $array['author'] );
 
 		$postarr = array(
 			'post_author'  => $user_id,
+			'post_content' => '',
 			'post_status'  => 'publish',
 			'post_title'   => get_current_user() . ' ' . current_time( 'mysql' ),
 			'post_type'    => 'um_activity',
@@ -169,25 +199,33 @@ class Actions {
 
 		// Content.
 		if ( ! empty( $_POST['uma-content-text'] ) ) {
-			$original_content = wp_kses_post( $this->get_random_content() );
-			$post_content     = $original_content;
-			$urls             = wp_extract_urls( $post_content );
-			if ( is_array( $urls ) ) {
-				foreach ( $urls as $url ) {
-					$oEmbed = wp_oembed_get( $url );
-					if ( $oEmbed ) {
-						$post_content = str_replace( $url, '', $post_content );
-						break;
-					}
-				}
-			}
+			$post_content = wp_kses_post( $this->get_random_content() );
 			$postarr['post_content']                    = $post_content;
-			$postarr['meta_input']['_original_content'] = $original_content;
+			$postarr['meta_input']['_original_content'] = $post_content;
+		}
+
+		// YouTube video.
+		if ( ! empty( $_POST['uma-content-youtube'] ) ) {
+			$link = $this->get_random_youtube();
+			if ( is_string( $link ) ) {
+				$postarr['post_content'] .= "\n" . $link;
+			}
 		}
 
 		// oEmbed.
-		if ( ! empty( $oEmbed ) ) {
-			$postarr['meta_input']['_oembed'] = (string) $oEmbed;
+		$urls = wp_extract_urls( $postarr['post_content'] );
+		if ( is_array( $urls ) ) {
+			$post_content = $postarr['post_content'];
+			foreach ( $urls as $url ) {
+				$oEmbed = (string) wp_oembed_get( $url );
+				if ( $oEmbed ) {
+					$post_content = str_replace( $url, '', $post_content );
+
+					$postarr['post_content']          = $post_content;
+					$postarr['meta_input']['_oembed'] = $oEmbed;
+					break;
+				}
+			}
 		}
 
 		// Emoji.
@@ -225,7 +263,11 @@ class Actions {
 		return $post_id;
 	}
 
-	public function add_post_photo( $post_id, $user_id ) {
+	public function add_post_photo( $post_id, $user_id = 0 ) {
+		if ( empty( $user_id ) ) {
+			$user_id = get_post_meta( $post_id, '_user_id', true );
+		}
+
 		$source = $this->get_random_photo();
 		if ( $source ) {
 			$user_dir = UM()->uploader()->get_upload_user_base_dir( $user_id );
@@ -233,21 +275,25 @@ class Actions {
 			$filename = "stream_photo_{$hashed}.jpg";
 			$dest     = trailingslashit( $user_dir ) . wp_basename( $filename );
 
-			$res = copy( $source, $dest );
+			// maybe create directory.
+			if ( ! is_dir( $user_dir ) ) {
+				wp_mkdir_p( $user_dir );
+			}
 
-			update_post_meta( $post_id, '_photo', $filename );
+			if ( copy( $source, $dest ) ) {
+				$wp_filetype = wp_check_filetype_and_ext( $dest, $filename );
 
-			$wp_filetype = wp_check_filetype_and_ext( $dest, $filename );
+				$photo_metadata                  = array();
+				$photo_metadata['ext']           = empty( $wp_filetype['ext'] ) ? '' : $wp_filetype['ext'];
+				$photo_metadata['type']          = empty( $wp_filetype['type'] ) ? '' : $wp_filetype['type'];
+				$photo_metadata['size']          = filesize( $dest );
+				$photo_metadata['name']          = $dest;
+				$photo_metadata['basename']      = wp_basename( $filename );
+				$photo_metadata['original_name'] = wp_basename( $source );
 
-			$photo_metadata                  = array();
-			$photo_metadata['ext']           = empty( $wp_filetype['ext'] ) ? '' : $wp_filetype['ext'];
-			$photo_metadata['type']          = empty( $wp_filetype['type'] ) ? '' : $wp_filetype['type'];
-			$photo_metadata['size']          = filesize( $dest );
-			$photo_metadata['name']          = $dest;
-			$photo_metadata['basename']      = wp_basename( $filename );
-			$photo_metadata['original_name'] = wp_basename( $source );
-
-			update_post_meta( $post_id, '_photo_metadata', $photo_metadata );
+				update_post_meta( $post_id, '_photo', $filename );
+				update_post_meta( $post_id, '_photo_metadata', $photo_metadata );
+			}
 		}
 	}
 }

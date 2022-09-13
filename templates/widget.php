@@ -17,6 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="uma-field">
 		<label class="label">Content</label>
 		<label><input type="checkbox" name="uma-content-text" value="1" checked="checked">Text</label>
+		<label><input type="checkbox" name="uma-content-youtube" value="1">YouTube video</label>
 		<label><input type="checkbox" name="uma-content-photo" value="1">Photo</label>
 		<label><input type="checkbox" name="uma-content-emoji" value="1">Emoji</label>
 		<label><input type="checkbox" name="uma-content-feeling" value="1">Feeling</label>
