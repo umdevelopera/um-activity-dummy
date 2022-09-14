@@ -253,6 +253,11 @@ class Actions {
 			}
 		}
 
+		// Flagged.
+		if ( ! empty( $_POST['uma-content-flagged'] ) ) {
+			$postarr['meta_input']['_reported'] = 1;
+		}
+
 		// Add new post.
 		$post_id = wp_insert_post( $postarr );
 
